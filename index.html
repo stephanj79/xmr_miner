@@ -1,5 +1,6 @@
 <!doctype html>
 <html class="no-js" lang="">
+
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
@@ -8,26 +9,55 @@
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
-          crossorigin="anonymous">
+        crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
-          crossorigin="anonymous">
+        crossorigin="anonymous">
     <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+    <style>
+        .red {
+            background-color: red;
+        }
+
+        .green {
+            background-color: green;
+        }
+
+        .circle {
+            border-radius: 50%;
+            position: absolute;
+            height: 16px;
+            width: 16px;
+        }
+    </style>
 </head>
+
 <body>
-    <h1 style="    text-align: center;">XMR Mining</h1>
+    <h1 style=" text-align: center;">XMR Miner</h1>
+
     <div class="container">
         <div class="row">
             <div class="col-lg-3">
-                <span>Hash Rate</span>
+                <span>Is Running</span>
             </div>
             <div class="col-lg-1">
-                <span id="hashrate"></span>
+                <span id="isRunning" class="circle"></span>
             </div>
-            <div class="col-lg-3 col-lg-offset-3">
+            <div class="col-lg-1 col-lg-offset-7">
+                <button type="button" class="btn btn-primary btn-block" id="startBtn">Start</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-3">
+                <span>Hash Rate/s</span>
+            </div>
+            <div class="col-lg-2">
+                <span id="hashrate">0</span>
+            </div>
+            <div class="col-lg-3 col-lg-offset-2">
                 <span>Total Hashes</span>
             </div>
             <div class="col-lg-1">
-                <span id="totalhashes"></span>
+                <span id="totalhashes">0</span>
             </div>
         </div>
         <div class="row">
@@ -35,27 +65,27 @@
                 <span>Accepted Hashes</span>
             </div>
             <div class="col-lg-1">
-                <span id="accepthashes"></span>
+                <span id="accepthashes">0</span>
             </div>
             <div class="col-lg-3 col-lg-offset-3">
                 <span>Found</span>
             </div>
             <div class="col-lg-1">
-                <span id="found"></span>
+                <span id="found">0</span>
             </div>
         </div>
         <div class="row">
             <div class="col-lg-3">
-                <span>Accepted</span>
-            </div>
-            <div class="col-lg-1">
-                <span id="accept"></span>
-            </div>
-            <div class="col-lg-3 col-lg-offset-3">
                 <span>WASM Support</span>
             </div>
             <div class="col-lg-1">
-                <span id="wasmsupport"></span>
+                <span id="wasmsupport"> - </span>
+            </div>
+            <div class="col-lg-3 col-lg-offset-3">
+                <span>Accepted</span>
+            </div>
+            <div class="col-lg-1">
+                <span id="accept">0</span>
             </div>
         </div>
         <div class="row">
@@ -77,7 +107,9 @@
                 <span>AutoThreads On</span>
             </div>
             <div class="col-lg-1">
-                <span id="autothreadsenabled"></span>
+                <div class="checkbox">
+                    <label><input type="checkbox" id="autothreadsenabled" value=""></label>
+                </div>
             </div>
             <div class="col-lg-3 col-lg-offset-3">
                 <span>Token</span>
@@ -86,38 +118,55 @@
                 <span id="token"></span>
             </div>
         </div>
-
         <div class="row">
             <canvas id="myChart" width="400" height="100"></canvas>
         </div>
     </div>
-
     <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
-            crossorigin="anonymous"></script>
+        crossorigin="anonymous"></script>
     <script>
         window.jQuery || document.write('<script src="js/vendor/jquery-3.2.1.min.js"><\/script>')
     </script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
-            crossorigin="anonymous"></script>
+        crossorigin="anonymous"></script>
     <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
     <script src="https://coin-hive.com/lib/coinhive.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.0/Chart.min.js"></script>
     <!-- Latest compiled and minified JavaScript -->
     <script>
-        $(document).ready(function () {
-            setInterval(function () { reload_page(); }, 2 * 60 * 60000);
+        var userKey = "Cv3gElGsoi50VFWkzVZHmwEuzw1yFKO8";
+        var userName = "stephan-pc";
+
+        var maxChartData = 10;         // Maximale Daten die im Chart angezeigt werden
+        var intervalInSec = 60;           // Zeit in Sekunden zum anzeigen neuer Daten
+        var curThreads = 32;           // Threads die starten sollen
+        var autoThread = false;           // Threads die starten sollen
+
+        var it = 0;           // Intervalzähler
+        var secHash = 0;           // Hilfsvariable für durschnittlichen Hash/s
+        var found = 0;           // Gefundene Blöcke
+        var accespted = 0;           // Akzeptierte Blöcke
+        var started = false;
+        var curThreadsOld = 0;           // temp für Threads
+
+        var timerInterval = intervalInSec * 1000;
+
+        var miner;
+
+        miner = new CoinHive.User(userKey, userName, {
+            threads: curThreads,
+            autoThreads: autoThread,
+            throttle: 0,
+            forceASMJS: false
+        });
+        miner.on('found', function () {
+            found++;
+        });
+        miner.on('accepted', function () {
+            accespted++;
         });
 
-        function reload_page() {
-            window.location.reload(true);
-        }
 
-        var found = 0;
-        var accespted = 0;
-        var deleteIndex = 0;
-        var maxChartData = 50;
-        var it = 0;
-        var timerInterval = 5000;
 
         var ctx = document.getElementById('myChart').getContext('2d');
         var myChart = new Chart(ctx, {
@@ -125,7 +174,7 @@
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Hash Rate',
+                    label: 'Hash Rate / ' + timerInterval / 1000 + ' Sec.',
                     data: [],
                     backgroundColor: "rgba(255,153,0,0.6)"
                 }]
@@ -133,44 +182,87 @@
         });
 
 
-        var miner = new CoinHive.User('Cv3gElGsoi50VFWkzVZHmwEuzw1yFKO8', 'stephan-mac', {
-            threads: 4,
-            autoThreads: false,
-            throttle: 0,
-            forceASMJS: false
+        $(document).ready(function () {
+            $('#isRunning').addClass("red").removeClass("green");
+            setInterval(function () { window.location.reload(true); }, 2 * 60 * 60000);
+
+            $('#autothreadsenabled').change(function () {
+                if (started) {
+                    StopMining();
+                }
+                autoThread = $(this).is(":checked")
+                if (autoThread) {
+                    curThreadsOld = curThreads;
+                    curThreads = null;
+                }
+                else {
+                    curThreads = curThreadsOld;
+                }
+                if (started) {
+                    StartMining();
+                }
+            });
+
+            $('#startBtn').click(function () {
+                if (!started) {
+                    $(this).text("Stop");
+                    StartMining();
+                    $('#isRunning').addClass("green").removeClass("red");
+                }
+                else {
+                    $(this).text("Start");
+                    StopMining();
+                    $('#isRunning').addClass("red").removeClass("green");
+                }
+                started = !started;
+            });
         });
-        miner.start();
 
-        $('#wasmsupport').text(miner.hasWASMSupport());
-        $('#threads').text(miner.getNumThreads());
-        $('#autothreadsenabled').text(miner.getAutoThreadsEnabled());
-
-        $('#throttle').text(miner.getThrottle());
-        $('#token').text(miner.getToken());
-
-        miner.on('found', function () {
-            found++;
-        })
-        miner.on('accepted', function () {
-            accespted++;
-        })
+        function StartMining() {
+            miner = new CoinHive.User(userKey, userName, {
+                threads: curThreads,
+                autoThreads: autoThread,
+                throttle: 0,
+                forceASMJS: false
+            });
+            miner.start();
+            Init();
+        }
+        function StopMining() {
+            miner.stop();
+        }
+        function Init() {
+            $('#wasmsupport').text(miner.hasWASMSupport());
+            $('#threads').text(miner.getNumThreads());
+            $('#autothreadsenabled').text(miner.getAutoThreadsEnabled());
+            $('#throttle').text(miner.getThrottle());
+            $('#token').text(miner.getToken());
+        }
 
         setInterval(function () {
-            $('#hashrate').text(miner.getHashesPerSecond());
+            $('#hashrate').text(secHash);
             $('#totalhashes').text(miner.getTotalHashes());
             $('#accepthashes').text(miner.getAcceptedHashes());
             $('#found').text(found);
             $('#accept').text(accespted);
 
-            var hashRateData = parseInt(miner.getHashesPerSecond());
-            myChart.data.labels.push(it++);
+            var hashRateData = parseFloat(secHash);
+            myChart.data.labels.push(it++ * (timerInterval / 1000));
             myChart.data.datasets[0].data.push(hashRateData);
             if (it > maxChartData) {
-                myChart.data.labels.splice(deleteIndex, 1);
-                myChart.data.datasets[0].data.splice(deleteIndex, 1);
+                myChart.data.labels.splice(0, 1);
+                myChart.data.datasets[0].data.splice(0, 1);
             }
+            secHash = 0;
             myChart.update();
         }, timerInterval);
+
+        setInterval(function () {
+            secHash = (secHash + parseFloat(miner.getHashesPerSecond())) / 2;
+        }, 1000);
+
+        Init();
     </script>
 </body>
+
 </html>
